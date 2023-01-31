@@ -1,0 +1,303 @@
+{
+ "cells": [
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Algorithme des $k$ plus proches voisins"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Exemples des iris."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "# neighbors traite de l'algorithme, datasets contient des données exemples\n",
+    "from sklearn import neighbors, datasets\n",
+    "\n",
+    "# Les données sont déjà intégrées dans le module\n",
+    "iris = datasets.load_iris()     # un dictionnaire contenant les données\n",
+    "print(iris.keys())              # affiche les clés du  dictionnaire\n",
+    "print(iris['feature_names'])    # affiche les noms des données numériques\n",
+    "print(iris['target_names'])     # les noms des catégories d'iris\n",
+    "# Récupération des données : une ligne par fleur\n",
+    "petales = True                 # on s'intéresse aux pétales ou aux sépales\n",
+    "if petales:\n",
+    "    X = iris['data'][:, 2:]     # on ne garde que les dimensions des pétales\n",
+    "    donnee = 'petales'\n",
+    "else:\n",
+    "    X = iris['data'][:, :2]     # on ne garde que les dimensions des sépales\n",
+    "    donnee = 'sepales'\n",
+    "\n",
+    "C = iris['target']              # les catégories"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def graphique():\n",
+    "    # On trace les nuages de points représentant chaque fleur\n",
+    "    # La catégorie est représenté par la couleur\n",
+    "    couleurs = ['g', 'r', 'b']\n",
+    "    marqueurs = ['o', '^', '*']\n",
+    "    for i in range(len(iris['target_names'])):\n",
+    "        plt.scatter(X[C == i, 0], X[C == i, 1], color=couleurs[i],\n",
+    "                    label=iris['target_names'][i], marker=marqueurs[i])\n",
+    "    plt.legend()\n",
+    "\n",
+    "\n",
+    "plt.figure()\n",
+    "graphique()\n",
+    "plt.show()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Une nouvelle fleur\n",
+    "longueur=2.5 if petales else 5.7\n",
+    "largeur=0.75 if petales else 3.3\n",
+    "plt.figure()\n",
+    "graphique()\n",
+    "plt.scatter(longueur, largeur, color='k',marker='X')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def distance(a, b):\n",
+    "    return np.sqrt((a[0]-b[0])**2+(a[1]-b[1])**2)\n",
+    "\n",
+    "\n",
+    "def trace_voisins(k):\n",
+    "    plt.scatter(longueur, largeur, color='k', marker='X')\n",
+    "    d = [(i, distance(X[i], (longueur, largeur))) for i in range(len(X))]\n",
+    "    d.sort(key=lambda z: z[1])\n",
+    "    for i in range(k):\n",
+    "        plt.plot([longueur, X[d[i][0], 0]], [largeur, X[d[i][0], 1]], 'k')\n",
+    "    ax = plt.gca()\n",
+    "    ax.set_aspect('equal', adjustable='datalim')\n",
+    "    ax.add_patch(plt.Circle((longueur, largeur),\n",
+    "                            d[k-1][1], color='k', fill=False))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def classifie(k):\n",
+    "    modele = neighbors.KNeighborsClassifier(n_neighbors=k)\n",
+    "    modele.fit(X, C)\n",
+    "    prediction = modele.predict([[longueur, largeur]])\n",
+    "    print(iris['target_names'][prediction[0]])\n",
+    "    plt.figure()\n",
+    "    plt.title(r'$k=$'+repr(k))\n",
+    "    graphique()\n",
+    "    trace_voisins(k)\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "classifie(3)\n",
+    "classifie(5)\n",
+    "classifie(7)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Reconnaissance de caractères (chiffres) manusrits."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "from sklearn import neighbors, datasets\n",
+    "digits = datasets.load_digits()\n",
+    "X = digits['data']          # les données\n",
+    "C = digits['target']        # les catégories (chiffres)\n",
+    "images = digits['images']   # les images\n",
+    "# taille de l'échantillon d'apprentissage\n",
+    "taille_appr = 800\n",
+    "# taille de l'échantillon de test\n",
+    "taille_test = 36\n",
+    "Xappr = X[:taille_appr]\n",
+    "Cappr = C[:taille_appr]\n",
+    "Xtest = X[taille_appr:taille_appr+taille_test]\n",
+    "Ctest = C[taille_appr:taille_appr+taille_test]\n",
+    "\n",
+    "k = 7\n",
+    "modele = neighbors.KNeighborsClassifier(n_neighbors=k)\n",
+    "modele.fit(Xappr, Cappr)\n",
+    "prediction = modele.predict(Xtest)\n",
+    "\n",
+    "if taille_test < 40:\n",
+    "    print(prediction)   # les valeurs prédites\n",
+    "    print(Ctest)        # les vraies valeurs\n",
+    "    # on trace les images des chiffres testés\n",
+    "    _, axes = plt.subplots(nrows=1, ncols=len(\n",
+    "        Xtest), figsize=(0.272*taille_test, 0.3))\n",
+    "    for ax, image, label in zip(axes, images[taille_appr:taille_appr+taille_test], C[taille_appr:taille_appr+taille_test]):\n",
+    "        ax.set_axis_off()\n",
+    "        ax.imshow(image, cmap=plt.cm.gray_r, interpolation=\"nearest\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn import metrics\n",
+    "disp = metrics.ConfusionMatrixDisplay.from_predictions(Ctest, prediction)\n",
+    "disp.figure_.suptitle(\"Matrice de confusion\")\n",
+    "disp.ax_.set(\n",
+    "                # title='Sklearn Confusion Matrix with labels!!', \n",
+    "                xlabel='Prédictions', \n",
+    "                ylabel='Vrais chiffres')\n",
+    "print(f\"Matrice de confusion :\\n{disp.confusion_matrix}\")\n",
+    "\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# $k$-moyennes."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Exemple des chiffres manuscrits."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn import metrics\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "from sklearn import datasets\n",
+    "from sklearn.cluster import KMeans\n",
+    "digits = datasets.load_digits()\n",
+    "X = digits['data']          # les données\n",
+    "C = digits['target']        # les catégories (chiffres)\n",
+    "images = digits['images']   # les images\n",
+    "modele = KMeans(n_clusters=10, random_state=0, n_init=1).fit(X)\n",
+    "prediction = modele.predict(X)\n",
+    "\n",
+    "nb = 36\n",
+    "\n",
+    "# affichage des nb premiers chiffres de chaque catégorie\n",
+    "for i in range(10):\n",
+    "    _, axes = plt.subplots(nrows=1, ncols=nb, figsize=(0.272*nb, 0.3))\n",
+    "    for ax, image, label in zip(axes, images[prediction == i][:nb], C[prediction == i][:nb]):\n",
+    "        ax.set_axis_off()\n",
+    "        ax.imshow(image, cmap=plt.cm.gray_r, interpolation=\"nearest\")\n",
+    "    plt.show()\n",
+    "\n",
+    "# matrice de confusion\n",
+    "disp = metrics.ConfusionMatrixDisplay.from_predictions(C, prediction)\n",
+    "disp.figure_.suptitle(\"Matrice de confusion\")\n",
+    "disp.ax_.set(\n",
+    "    # title='Sklearn Confusion Matrix with labels!!',\n",
+    "    xlabel='Prédictions',\n",
+    "    ylabel='Vrais chiffres')\n",
+    "print(f\"Matrice de confusion :\\n{disp.confusion_matrix}\")\n",
+    "\n",
+    "plt.show()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "from sklearn.datasets import make_blobs\n",
+    "from sklearn.cluster import KMeans\n",
+    "n = 2000\n",
+    "random_state = 10\n",
+    "X, y = make_blobs(n_samples=n)\n",
+    "modele = KMeans(n_clusters=3, n_init=1).fit(X)\n",
+    "prediction = modele.predict(X)\n",
+    "plt.figure()\n",
+    "plt.scatter(X[:, 0], X[:, 1], c=prediction)\n",
+    "plt.show()\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.6"
+  },
+  "orig_nbformat": 4,
+  "vscode": {
+   "interpreter": {
+    "hash": "11938c6bc6919ae2720b4d5011047913343b08a43b18698fd82dedb0d4417594"
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
